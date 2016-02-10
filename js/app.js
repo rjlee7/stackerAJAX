@@ -12,7 +12,7 @@ var showQuestion = function(question) {
 
 	// set the date asked property in result
 	var asked = result.find('.asked-date');
-	var date = new Date(1000*question.creation_date);
+	var date = new Date(1000 * question.creation_date);
 	asked.text(date.toString());
 
 	// set the .viewed for question property in result
@@ -29,8 +29,31 @@ var showQuestion = function(question) {
 	);
 
 	return result;
+
 };
 
+// this function takes the info(user's info) object returned by the StackOverflow request
+// and returns new result to be appended to DOM
+
+var showAnswerer = function(info) {
+
+	var result = $('.templates2 .answer').clone();
+	
+	//set display name
+	var displayName = result.find('.display_name');
+	displayName.text(info.user.display_name);
+	
+	//set profile image
+	var profileImage = result.find('.profile_image img');
+	profileImage.attr('src', info.user.profile_image);
+	
+	//set score
+	var score = result.find('.score');
+	score.text(info.score);
+
+	return result;
+
+};
 
 // this function takes the results object from StackOverflow
 // and returns the number of results and tags to be appended to DOM
@@ -65,30 +88,99 @@ var getUnanswered = function(tags) {
 		type: "GET",
 	})
 	.done(function(result){ //this waits for the ajax to return with a succesful promise object
+		
 		var searchResults = showSearchResults(request.tagged, result.items.length);
 
 		$('.search-results').html(searchResults);
+		
 		//$.each is a higher order function. It takes an array and a function as an argument.
 		//The function is executed once for each item in the array.
 		$.each(result.items, function(i, item) {
+		
 			var question = showQuestion(item);
+		
 			$('.results').append(question);
+		
 		});
+
 	})
 	.fail(function(jqXHR, error){ //this waits for the ajax to return with an error promise object
+		
 		var errorElem = showError(error);
+		
 		$('.search-results').append(errorElem);
+	
 	});
+
 };
 
+var getTopAnswerers = function(tag) {
+	
+	var request = {
+		tag: tag,
+		site: 'stackoverflow',
+		period: 'all_time'
+	};
+	
+	$.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/" + request.tag + "/top-answerers/all_time",
+		data: request,
+		dataType: "jsonp",
+		type: "GET"
+	})
+	.done(function(result){ //this waits for the ajax to return with a succesful promise object
+		
+		var searchResults = showSearchResults(request.tag, result.items.length);
+
+		$('.search-results').html(searchResults);
+		
+		//$.each is a higher order function. It takes an array and a function as an argument.
+		//The function is executed once for each item in the array.
+		$.each(result.items, function(i, item) {
+
+			var answerer = showAnswerer(item);
+
+			$('.results').append(answerer);
+
+		});
+
+	})
+	.fail(function(jqXHR, error){ //this waits for the ajax to return with an error promise object
+		
+		var errorElem = showError(error);
+		
+		$('.search-results').append(errorElem);
+	
+	});	
+
+};
 
 $(document).ready( function() {
-	$('.unanswered-getter').submit( function(e){
+
+	$('.unanswered-getter').submit(function(e){
+
 		e.preventDefault();
+
 		// zero out results if previous search has run
 		$('.results').html('');
+
 		// get the value of the tags the user submitted
 		var tags = $(this).find("input[name='tags']").val();
+
 		getUnanswered(tags);
+
 	});
+
+	$('.inspiration-getter').submit(function(e){
+		
+		e.preventDefault();
+
+		$('.results').html('');
+
+		var name = $(this).find("input[name='answerers']").val();
+
+		getTopAnswerers(name);
+
+	});
+
 });
